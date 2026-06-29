@@ -6,16 +6,13 @@ import * as Y from "yjs"
 import { SocketIOProvider } from "y-socket.io"
 
 function App() {
-
   const editorRef = useRef(null)
-  const [ username, setUsername ] = useState(() => {
+  const [username, setUsername] = useState(() => {
     return new URLSearchParams(window.location.search).get("username") || ""
   })
-  const [ users, setUsers ] = useState([])
-
+  const [users, setUsers] = useState([])
   const ydoc = useMemo(() => new Y.Doc(), [])
-  const yText = useMemo(() => ydoc.getText("monaco"), [ ydoc ])
-
+  const yText = useMemo(() => ydoc.getText("monaco"), [ydoc])
 
   const handleMount = (editor) => {
     editorRef.current = editor
@@ -23,7 +20,7 @@ function App() {
     new MonacoBinding(
       yText,
       editorRef.current.getModel(),
-      new Set([ editorRef.current ]),
+      new Set([editorRef.current]),
     )
   }
 
@@ -35,22 +32,14 @@ function App() {
     setUsername(e.target.username.value)
     window.history.pushState({}, "", "?username=" + e.target.username.value)
 
-
-
   }
-
   useEffect(() => {
-
     console.log(username)
-
     if (username) {
-
       const provider = new SocketIOProvider("/", "monaco", ydoc, {
         autoConnect: true,
       })
-
       provider.awareness.setLocalStateField("user", { username })
-
 
       const states = Array.from(provider.awareness.getStates().values())
 
@@ -62,14 +51,10 @@ function App() {
         const states = Array.from(provider.awareness.getStates().values())
         setUsers(states.filter(state => state.user && state.user.username).map(state => state.user))
       })
-
       function handleBeforeUnload() {
         provider.awareness.setLocalStateField("user", null)
       }
-
       window.addEventListener("beforeunload", handleBeforeUnload)
-
-
       return () => {
         provider.disconnect()
         window.removeEventListener("beforeunload", handleBeforeUnload)
@@ -116,7 +101,6 @@ function App() {
             </li>
           ))}
         </ul>
-
       </aside>
       <section
         className="w-3/4 bg-neutral-800 rounded-lg overflow-hidden">
