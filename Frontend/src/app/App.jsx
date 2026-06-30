@@ -1,120 +1,83 @@
-import "./App.css"
-import { Editor } from "@monaco-editor/react"
-import { MonacoBinding } from "y-monaco"
-import { useRef, useMemo, useState, useEffect } from "react"
-import * as Y from "yjs"
-import { SocketIOProvider } from "y-socket.io"
+import './App.css';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import LandingPage from './pages/LandingPage';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import EditorPage from './pages/EditorPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
-function App() {
-  const editorRef = useRef(null)
-  const [username, setUsername] = useState(() => {
-    return new URLSearchParams(window.location.search).get("username") || ""
-  })
-  const [users, setUsers] = useState([])
-  const ydoc = useMemo(() => new Y.Doc(), [])
-  const yText = useMemo(() => ydoc.getText("monaco"), [ydoc])
+const pageVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { duration: 0.3 } },
+  exit: { opacity: 0, transition: { duration: 0.2 } },
+};
 
-  const handleMount = (editor) => {
-    editorRef.current = editor
-
-    new MonacoBinding(
-      yText,
-      editorRef.current.getModel(),
-      new Set([editorRef.current]),
-    )
-  }
-
-
-
-
-  const handleJoin = (e) => {
-    e.preventDefault()
-    setUsername(e.target.username.value)
-    window.history.pushState({}, "", "?username=" + e.target.username.value)
-
-  }
-  useEffect(() => {
-    console.log(username)
-    if (username) {
-      const provider = new SocketIOProvider("/", "monaco", ydoc, {
-        autoConnect: true,
-      })
-      provider.awareness.setLocalStateField("user", { username })
-
-      const states = Array.from(provider.awareness.getStates().values())
-
-      console.log(states)
-
-      setUsers(states.filter(state => state.user && state.user.username).map(state => state.user))
-
-      provider.awareness.on("change", () => {
-        const states = Array.from(provider.awareness.getStates().values())
-        setUsers(states.filter(state => state.user && state.user.username).map(state => state.user))
-      })
-      function handleBeforeUnload() {
-        provider.awareness.setLocalStateField("user", null)
-      }
-      window.addEventListener("beforeunload", handleBeforeUnload)
-      return () => {
-        provider.disconnect()
-        window.removeEventListener("beforeunload", handleBeforeUnload)
-      }
-    }
-  }, [
-    username
-  ])
-
-  if (!username) {
-    return (
-      <main className="h-screen w-full bg-gray-950 flex gap-4 p-4 items-center justify-center" >
-        <form
-          onSubmit={handleJoin}
-          className="flex flex-col gap-4">
-          <input
-            type="text"
-            placeholder="Enter your username"
-            className="p-2 rounded-lg bg-gray-800 text-white"
-            name="username"
-          />
-          <button
-            className="p-2 rounded-lg bg-amber-50 text-gray-950 font-bold"
-          >
-            Join
-          </button>
-        </form>
-      </main>
-    )
-  }
-
+function AnimatedPage({ children }) {
   return (
-    <main
-      className="h-screen w-full bg-gray-950 flex gap-4 p-4"
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
     >
-      <aside
-        className="h-full w-1/4 bg-amber-50 rounded-lg "
-      >
-        <h2 className="text-2xl font-bold p-4 border-b border-gray-300">Users</h2>
-        <ul className="p-4">
-          {users.map((user, index) => (
-            <li key={index} className="p-2 bg-gray-800 text-white rounded mb-2">
-              {user.username}
-            </li>
-          ))}
-        </ul>
-      </aside>
-      <section
-        className="w-3/4 bg-neutral-800 rounded-lg overflow-hidden">
-        <Editor
-          height="100%"
-          defaultLanguage="javascript"
-          defaultValue="// some comment"
-          theme="vs-dark"
-          onMount={handleMount}
-        />
-      </section>
-
-    </main>
-  )
+      {children}
+    </motion.div>
+  );
 }
 
-export default App
+function App() {
+  const location = useLocation();
+
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route
+          path="/"
+          element={
+            <AnimatedPage>
+              <LandingPage />
+            </AnimatedPage>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <AnimatedPage>
+              <Login />
+            </AnimatedPage>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <AnimatedPage>
+              <Register />
+            </AnimatedPage>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <AnimatedPage>
+                <Dashboard />
+              </AnimatedPage>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/editor"
+          element={
+            <ProtectedRoute>
+              <EditorPage />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </AnimatePresence>
+  );
+}
+
+export default App;
